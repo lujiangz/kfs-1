@@ -1,7 +1,7 @@
 AS = as --32
 CC = gcc
 LD = ld
-GRUB = grub-mkrescue
+GRUB = grub-mkrescue --fonts="" --locales="" --themes="" --install-modules="multiboot normal terminal boot"
 
 CFLAGS = -m32 -ffreestanding -fno-builtin -fno-exceptions -fno-stack-protector -nostdlib -nodefaultlibs
 LDFLAGS = -m elf_i386 -T linker.ld 
@@ -9,7 +9,7 @@ LDFLAGS = -m elf_i386 -T linker.ld
 KERNEL_BIN = kernel.bin 
 ISO_NAME = myos.iso
 
-OBJS = boot.o kernel.o
+OBJS = boot.o kernel_utils.o kernel.o
 
 all: $(ISO_NAME)
 
@@ -21,6 +21,9 @@ boot.o: boot.s
 
 kernel.o: kernel.c
 		$(CC) $(CFLAGS) -c $< -o $@
+
+kernel_utils.o: kernel_utils.c
+	$(CC) $(CFLAGS) -c $< -o $@
 
 $(ISO_NAME) : $(KERNEL_BIN)
 		mkdir -p isodir/boot/grub
