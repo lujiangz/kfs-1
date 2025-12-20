@@ -1,0 +1,15 @@
+# Build outputs
+*.o
+*.bin
+*.iso
+isodir/
+
+# IDE
+.vscode/
+.idea/
+
+# OS files
+.DS_Store
+
+# PDFs
+*.pdf

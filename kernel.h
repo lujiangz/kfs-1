@@ -3,7 +3,14 @@
 
 typedef unsigned char uint8_t;
 typedef unsigned short uint16_t;
+typedef unsigned int uint32_t;
+typedef int int32_t;
 typedef unsigned int size_t;
+
+typedef __builtin_va_list va_list;
+#define va_start(ap, last) __builtin_va_start(ap, last)
+#define va_arg(ap, type) __builtin_va_arg(ap, type)
+#define va_end(ap) __builtin_va_end(ap)
 
 /* VGA Sabitleri */
 #define VGA_WIDTH 80
@@ -37,5 +44,16 @@ void enable_cursor(uint8_t cursor_start, uint8_t cursor_end);
 size_t strlen(const char* str);
 uint16_t vga_entry(unsigned char uc, uint8_t color);
 uint8_t vga_entry_color(enum vga_color fg, enum vga_color bg);
+
+void terminal_putchar(char c);
+void terminal_writestring(const char* data);
+void terminal_setcolor(uint8_t color);
+
+void printk(const char* format, ...);
+void vprintk(const char* format, va_list args);
+
+void print_int(int32_t num);
+void print_uint(uint32_t num);
+void print_hex(uint32_t num, int uppercase);
 
 #endif

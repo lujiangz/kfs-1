@@ -28,6 +28,8 @@ void terminal_initialize(void) {
             terminal_buffer[index] = vga_entry(' ', terminal_color);
         }
     }
+    
+    enable_cursor(0, 15);
     update_cursor(0, 0);
 }
 
@@ -70,26 +72,15 @@ void terminal_writestring(const char* data) {
 
 void kernel_main(void) {
     terminal_initialize();
-    terminal_writestring("42\n");
+    
+    printk("42\n");
+    printk("Hello, %s!\n", "World");
+    printk("Number: %d\n", 123);
+    printk("Unsigned: %u\n", 4294967295);
+    printk("Hex: %x\n", 123456789);
+    printk("Hex: %X\n", 123456789);
+    printk("Pointer: %p\n", &kernel_main);
+    printk("Percent: %%\n");
+    printk("Char: %c\n", 'A');
+    printk("String: %s\n", "Hello, World!");
 }
-
-/*  void kernel_main(void) {
-    terminal_initialize();
-
-    terminal_writestring("--- EN UST SATIR (Bu yazi kaybolmali) ---\n");
-    terminal_writestring("--- EN UST SATIR (Bu yazi kaybolmali) ---\n");
-    terminal_writestring("--- EN UST SATIR (Bu yazi kaybolmali) ---\n");
-
-    for(int i = 0; i < 30; i++) {
-        terminal_writestring("Scroll testi yapiyoruz... Asagi kayiyor...\n");
-
-        //Çok hızlı geçmesin diye işlemciyi boş yere oyalıyoruz (Delay)
-        for(int j = 0; j < 5000000; j++) {
-             __asm__ volatile("nop");
-        }
-    }
-
-    terminal_writestring("----------------------------------\n");
-    terminal_writestring("------------TEST BITTI:-----------\n");
-    terminal_writestring("----------------------------------\n");
-} */
