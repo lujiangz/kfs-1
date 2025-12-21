@@ -70,26 +70,23 @@ void terminal_writestring(const char* data) {
 
 void kernel_main(void) {
     terminal_initialize();
-    terminal_writestring("42\n");
-}
 
-/*  void kernel_main(void) {
-    terminal_initialize();
+    printk("--- KFS-1 KERNEL STARTED ---\n");
+    printk("Testing printf features:\n");
+    printk("Char: %c, String: %s\n", 'A', "Hello 42");
+    int answer = 42;
+    printk("Decimal: %d\n", answer);
+    printk("Negative: %d\n", -123);
+    printk("Hex (VGA Addr): %x\n", 0xB8000);
+    printk("\nStarting Scroll Test in 3... 2... 1...\n");
+    
+    for(int i = 0; i < 100000000; i++) __asm__ volatile("nop");
 
-    terminal_writestring("--- EN UST SATIR (Bu yazi kaybolmali) ---\n");
-    terminal_writestring("--- EN UST SATIR (Bu yazi kaybolmali) ---\n");
-    terminal_writestring("--- EN UST SATIR (Bu yazi kaybolmali) ---\n");
-
-    for(int i = 0; i < 30; i++) {
-        terminal_writestring("Scroll testi yapiyoruz... Asagi kayiyor...\n");
-
-        //Çok hızlı geçmesin diye işlemciyi boş yere oyalıyoruz (Delay)
-        for(int j = 0; j < 5000000; j++) {
-             __asm__ volatile("nop");
-        }
+    for (int i = 1; i <= 30; i++) {
+        printk("Log Entry Number: %d (System is running...)\n", i);
+        // Biraz yavaşlat ki aktığını gör
+        for(volatile int j=0; j<100000000; j++); 
     }
 
-    terminal_writestring("----------------------------------\n");
-    terminal_writestring("------------TEST BITTI:-----------\n");
-    terminal_writestring("----------------------------------\n");
-} */
+    printk("--- TEST FINISHED ---");
+}

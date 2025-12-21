@@ -12,7 +12,6 @@ uint8_t inb(uint16_t port) {
     return ret;
 }
 
-/* İmleç Güncelleme */
 void update_cursor(int x, int y) {
     uint16_t pos = y * VGA_WIDTH + x;
     outb(0x3D4, 0x0F);
@@ -21,7 +20,6 @@ void update_cursor(int x, int y) {
     outb(0x3D5, (uint8_t) ((pos >> 8) & 0xFF));
 }
 
-/* İmleç Açma (Opsiyonel) */
 void enable_cursor(uint8_t cursor_start, uint8_t cursor_end) {
     outb(0x3D4, 0x0A);
     outb(0x3D5, (inb(0x3D5) & 0xC0) | cursor_start);
@@ -29,7 +27,6 @@ void enable_cursor(uint8_t cursor_start, uint8_t cursor_end) {
     outb(0x3D5, (inb(0x3D5) & 0xE0) | cursor_end);
 }
 
-/* String Uzunluğu Hesaplama */
 size_t strlen(const char* str) {
     size_t len = 0;
     while (str[len])
@@ -44,4 +41,99 @@ uint8_t vga_entry_color(enum vga_color fg, enum vga_color bg) {
 
 uint16_t vga_entry(unsigned char uc, uint8_t color) {
     return (uint16_t) uc | (uint16_t) color << 8;
+}
+
+void k_string_reverse(char* str, int length) {
+    int start = 0;
+    int end = length - 1;
+    while (start < end) {
+        char temp = str[start];
+        str[start] = str[end];
+        str[end] = temp;
+        start++;
+        end--;
+    }
+}
+
+void k_int_to_string(int n, char* buffer, int base) {
+    int i = 0;
+    int is_negative = 0;
+
+    if (n == 0) {
+        buffer[i++] = '0';
+        buffer[i] = '\0';
+        return;
+    }
+
+    if (n < 0 && base == 10) {
+        is_negative = 1;
+        n = -n;
+    }
+
+    const char* digits = "0123456789ABCDEF";
+
+    while (n != 0) {
+        int remainder = n % base;
+        buffer[i++] = digits[remainder];
+        n = n / base;
+    }
+
+    if (is_negative) {
+        buffer[i++] = '-';
+    }
+
+    buffer[i] = '\0';
+
+    k_string_reverse(buffer, i);
+}
+
+void printk(const char* format, ...) {
+    va_list args;
+    va_start(args, format);
+
+    char num_buffer[32]; // Buffer for number conversions
+
+    for (size_t i = 0; format[i] != '\0'; i++) {
+        
+        if (format[i] != '%') {
+            terminal_putchar(format[i]);
+            continue;
+        }
+
+        i++; // Skip '%'
+
+        switch (format[i]) {
+            case 'c': {
+                char c = (char)va_arg(args, int);
+                terminal_putchar(c);
+                break;
+            }
+            case 's': {
+                const char* s = va_arg(args, const char*);
+                if (!s) s = "(null)";
+                terminal_writestring(s);
+                break;
+            }
+            case 'd': {
+                int val = va_arg(args, int);
+                k_int_to_string(val, num_buffer, 10);
+                terminal_writestring(num_buffer);
+                break;
+            }
+            case 'x': {
+                unsigned int val = va_arg(args, unsigned int);
+                terminal_writestring("0x");
+                k_int_to_string(val, num_buffer, 16);
+                terminal_writestring(num_buffer);
+                break;
+            }
+            default: {
+                terminal_putchar('%');
+                terminal_putchar(format[i]);
+                break;
+            }
+        }
+    }
+
+    va_end(args);
 }
