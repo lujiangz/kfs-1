@@ -3,14 +3,14 @@
 
 typedef unsigned char uint8_t;
 typedef unsigned short uint16_t;
+typedef unsigned int uint32_t;
+typedef int int32_t;
 typedef unsigned int size_t;
-typedef __builtin_va_list va_list;
 
-/* Printk makroları*/
-#define va_start(ap, last) __builtin_va_start(ap, last)
-#define va_end(ap)         __builtin_va_end(ap)
-#define va_arg(ap, type)   __builtin_va_arg(ap, type)
-#define va_copy(dest, src) __builtin_va_copy(dest, src)
+#define va_list __builtin_va_list
+#define va_start(v,l) __builtin_va_start(v,l)
+#define va_end(v) __builtin_va_end(v)
+#define va_arg(v,l) __builtin_va_arg(v,l)
 
 /* VGA Sabitleri */
 #define VGA_WIDTH 80
@@ -44,6 +44,20 @@ void enable_cursor(uint8_t cursor_start, uint8_t cursor_end);
 size_t strlen(const char* str);
 uint16_t vga_entry(unsigned char uc, uint8_t color);
 uint8_t vga_entry_color(enum vga_color fg, enum vga_color bg);
+
+void terminal_initialize(void);
+void terminal_setcolor(uint8_t color);
+void terminal_putentryat(char c, uint8_t color, size_t x, size_t y);
+void terminal_putchar(char c);
+void terminal_write(const char* data, size_t size);
+void terminal_writestring(const char* data);
+void terminal_scroll(void);
+void terminal_switch_screen(int screen_index);
+
+void itoa(int value, char* str, int base);
 void printk(const char* format, ...);
+
+void* memset(void* ptr, int value, size_t num);
+void* memcpy(void* destination, const void* source, size_t num);
 
 #endif

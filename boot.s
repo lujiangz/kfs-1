@@ -35,3 +35,35 @@ _start:
     jmp 1b
 
 .size _start, . - _start
+
+.global gdt_flush
+.type gdt_flush, @function
+gdt_flush:
+    mov 4(%esp), %eax
+    lgdt (%eax)
+    mov $0x10, %ax
+    mov %ax, %ds
+    mov %ax, %es
+    mov %ax, %fs
+    mov %ax, %gs
+    mov %ax, %ss
+    ljmp $0x08, $.flush
+.flush:
+    ret
+
+.global idt_load
+.type idt_load, @function
+idt_load:
+    mov 4(%esp), %eax
+    lidt (%eax)
+    ret
+
+.global isr33
+.type isr33, @function
+isr33:
+    cli
+    pusha
+    call keyboard_handler
+    popa
+    sti
+    iret

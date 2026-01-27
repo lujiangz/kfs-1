@@ -12,6 +12,7 @@ uint8_t inb(uint16_t port) {
     return ret;
 }
 
+/* İmleç Güncelleme */
 void update_cursor(int x, int y) {
     uint16_t pos = y * VGA_WIDTH + x;
     outb(0x3D4, 0x0F);
@@ -20,6 +21,7 @@ void update_cursor(int x, int y) {
     outb(0x3D5, (uint8_t) ((pos >> 8) & 0xFF));
 }
 
+/* İmleç Açma (Opsiyonel) */
 void enable_cursor(uint8_t cursor_start, uint8_t cursor_end) {
     outb(0x3D4, 0x0A);
     outb(0x3D5, (inb(0x3D5) & 0xC0) | cursor_start);
@@ -27,6 +29,7 @@ void enable_cursor(uint8_t cursor_start, uint8_t cursor_end) {
     outb(0x3D5, (inb(0x3D5) & 0xE0) | cursor_end);
 }
 
+/* String Uzunluğu Hesaplama */
 size_t strlen(const char* str) {
     size_t len = 0;
     while (str[len])
@@ -43,97 +46,101 @@ uint16_t vga_entry(unsigned char uc, uint8_t color) {
     return (uint16_t) uc | (uint16_t) color << 8;
 }
 
-void k_string_reverse(char* str, int length) {
-    int start = 0;
-    int end = length - 1;
-    while (start < end) {
-        char temp = str[start];
-        str[start] = str[end];
-        str[end] = temp;
-        start++;
-        end--;
-    }
-}
+/* Integer to ASCII */
+void itoa(int value, char* str, int base) {
+    char *ptr = str, *ptr1 = str, tmp_char;
+    int tmp_value;
 
-void k_int_to_string(int n, char* buffer, int base) {
-    int i = 0;
-    int is_negative = 0;
-
-    if (n == 0) {
-        buffer[i++] = '0';
-        buffer[i] = '\0';
+    if (base < 2 || base > 36) {
+        *str = '\0';
         return;
     }
 
-    if (n < 0 && base == 10) {
-        is_negative = 1;
-        n = -n;
+    if (value < 0 && base == 10) {
+        *ptr++ = '-';
+        str++; 
+        value = -value;
     }
 
-    const char* digits = "0123456789ABCDEF";
-
-    while (n != 0) {
-        int remainder = n % base;
-        buffer[i++] = digits[remainder];
-        n = n / base;
+    unsigned int num = (unsigned int)value;
+    if (base == 10 && value < 0) {
+        num = (unsigned int)(-value);
+    } else {
+        num = (unsigned int)value;
     }
 
-    if (is_negative) {
-        buffer[i++] = '-';
+    if (value == 0) {
+        *ptr++ = '0';
+        *ptr = '\0';
+        return;
     }
 
-    buffer[i] = '\0';
+    while (num != 0) {
+        tmp_value = num % base;
+        num /= base;
+        if (tmp_value > 9)
+            *ptr++ = (tmp_value - 10) + 'a';
+        else
+            *ptr++ = tmp_value + '0';
+    }
 
-    k_string_reverse(buffer, i);
+    *ptr-- = '\0';
+    
+    while (ptr1 < ptr) {
+        tmp_char = *ptr;
+        *ptr-- = *ptr1;
+        *ptr1++ = tmp_char;
+    }
 }
 
 void printk(const char* format, ...) {
     va_list args;
     va_start(args, format);
 
-    char num_buffer[32]; // Buffer for number conversions
-
-    for (size_t i = 0; format[i] != '\0'; i++) {
-        
-        if (format[i] != '%') {
-            terminal_putchar(format[i]);
-            continue;
-        }
-
-        i++; // Skip '%'
-
-        switch (format[i]) {
-            case 'c': {
+    while (*format != '\0') {
+        if (*format == '%') {
+            format++;
+            if (*format == 'c') {
                 char c = (char)va_arg(args, int);
                 terminal_putchar(c);
-                break;
-            }
-            case 's': {
-                const char* s = va_arg(args, const char*);
-                if (!s) s = "(null)";
+            } else if (*format == 's') {
+                char* s = va_arg(args, char*);
                 terminal_writestring(s);
-                break;
-            }
-            case 'd': {
-                int val = va_arg(args, int);
-                k_int_to_string(val, num_buffer, 10);
-                terminal_writestring(num_buffer);
-                break;
-            }
-            case 'x': {
-                unsigned int val = va_arg(args, unsigned int);
+            } else if (*format == 'd' || *format == 'i') {
+                int i = va_arg(args, int);
+                char buffer[32];
+                itoa(i, buffer, 10);
+                terminal_writestring(buffer);
+            } else if (*format == 'x') {
+                int i = va_arg(args, int);
+                char buffer[32];
+                itoa(i, buffer, 16);
                 terminal_writestring("0x");
-                k_int_to_string(val, num_buffer, 16);
-                terminal_writestring(num_buffer);
-                break;
-            }
-            default: {
+                terminal_writestring(buffer);
+            } else if (*format == '%') {
                 terminal_putchar('%');
-                terminal_putchar(format[i]);
-                break;
             }
+        } else {
+            terminal_putchar(*format);
         }
+        format++;
     }
 
     va_end(args);
+}
+
+/* Bellek İşlemleri */
+void* memset(void* ptr, int value, size_t num) {
+    unsigned char* p = (unsigned char*)ptr;
+    while (num--)
+        *p++ = (unsigned char)value;
+    return ptr;
+}
+
+void* memcpy(void* destination, const void* source, size_t num) {
+    unsigned char* dest = (unsigned char*)destination;
+    const unsigned char* src = (const unsigned char*)source;
+    while (num--)
+        *dest++ = *src++;
+    return destination;
 }
