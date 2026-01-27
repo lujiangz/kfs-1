@@ -9,7 +9,7 @@ LDFLAGS = -m elf_i386 -T linker.ld
 KERNEL_BIN = kernel.bin 
 ISO_NAME = myos.iso
 
-OBJS = boot.o kernel_utils.o kernel.o
+OBJS = boot.o kernel_utils.o kernel.o gdt.o idt.o keyboard.o
 
 all: $(ISO_NAME)
 
@@ -23,6 +23,15 @@ kernel.o: kernel.c
 		$(CC) $(CFLAGS) -c $< -o $@
 
 kernel_utils.o: kernel_utils.c
+	$(CC) $(CFLAGS) -c $< -o $@
+
+gdt.o: gdt.c
+	$(CC) $(CFLAGS) -c $< -o $@
+
+idt.o: idt.c
+	$(CC) $(CFLAGS) -c $< -o $@
+
+keyboard.o: keyboard.c
 	$(CC) $(CFLAGS) -c $< -o $@
 
 $(ISO_NAME) : $(KERNEL_BIN)
