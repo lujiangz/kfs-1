@@ -11,7 +11,7 @@ unsigned char kbdus[128] =
   't', 'y', 'u', 'i', 'o', 'p', '[', ']', '\n',	/* Enter key */
     0,		/* 29   - Control */
   'a', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l', ';',	/* 39 */
-'\'', '`',   0,		/* Left shift */
+ '\'', '`',   0,		/* Left shift */
  '\\', 'z', 'x', 'c', 'v', 'b', 'n', 'm', ',', '.', '/',   0,				/* Right shift */
   '*',
     0,	/* Alt */
@@ -44,28 +44,70 @@ unsigned char kbdus[128] =
 void keyboard_handler() {
     uint8_t scancode = inb(0x60);
 
-    /* En üst bit 1 ise tuş bırakıldı demektir (Release). */
+    /* Key release — ignore */
     if (scancode & 0x80) {
-        // Tuş bırakıldı.
-    } else {
-        // Tuş basıldı.
-        // DEBUG: Hangi tuşa basıldığını görmek için scancode'u yazdır.
-        // printk("[%x]", scancode); 
-        
-        if (scancode == 0x3B) { // F1
-             terminal_switch_screen(0);
-        } else if (scancode == 0x3C) { // F2
-             terminal_switch_screen(1);
-        } else if (scancode == 0x3D) { // F3
-             terminal_switch_screen(2);
-        } else if (scancode < 128) {
-            char c = kbdus[scancode];
-            if (c) {
+        goto eoi;
+    }
+
+    /* F1–F5: Screen switching */
+    if (scancode == 0x3B) { /* F1 */
+        terminal_switch_screen(0);
+        /* Restore input boundary for this screen */
+        goto eoi;
+    }
+    if (scancode == 0x3C) { /* F2 */
+        terminal_switch_screen(1);
+        goto eoi;
+    }
+    if (scancode == 0x3D) { /* F3 */
+        terminal_switch_screen(2);
+        goto eoi;
+    }
+    if (scancode == 0x3E) { /* F4 — Tester */
+        terminal_switch_screen(3);
+        run_tests();
+        /* After tests, switch to view result */
+        terminal_switch_screen(3);
+        goto eoi;
+    }
+    if (scancode == 0x3F) { /* F5 — Log */
+        terminal_switch_screen(4);
+        goto eoi;
+    }
+    
+    /* Only process keyboard input on user screens (0, 1, 2) */
+    if (current_screen >= 3)
+        goto eoi;
+
+    /* Translate scancode */
+    if (scancode < 128) {
+        char c = kbdus[scancode];
+        if (!c) goto eoi;
+
+        if (c == '\n') {
+            /* Enter — process command */
+            printk("\n");
+            cmd_buffer[cmd_len] = '\0';
+            process_command(cmd_buffer);
+            print_prompt();
+        } else if (c == '\b') {
+            /* Backspace — remove from buffer and screen */
+            if (cmd_len > 0) {
+                cmd_len--;
+                cmd_buffer[cmd_len] = '\0';
+                terminal_putchar('\b');
+            }
+        } else {
+            /* Printable character */
+            if (cmd_len < CMD_BUFFER_SIZE - 1) {
+                cmd_buffer[cmd_len++] = c;
+                cmd_buffer[cmd_len] = '\0';
                 printk("%c", c);
             }
         }
     }
 
-    /* PIC'e EOI (End of Interrupt) gönder */
+eoi:
+    /* Send EOI to PIC */
     outb(0x20, 0x20);
 }

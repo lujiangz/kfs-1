@@ -7,6 +7,8 @@ typedef unsigned int uint32_t;
 typedef int int32_t;
 typedef unsigned int size_t;
 
+#define NULL ((void*)0)
+
 #define va_list __builtin_va_list
 #define va_start(v,l) __builtin_va_start(v,l)
 #define va_end(v) __builtin_va_end(v)
@@ -16,6 +18,10 @@ typedef unsigned int size_t;
 #define VGA_WIDTH 80
 #define VGA_HEIGHT 25
 #define VGA_MEMORY 0xB8000
+
+/* Ekran Sabitleri */
+#define NUM_SCREENS 5
+#define CMD_BUFFER_SIZE 256
 
 /* Renkler */
 enum vga_color {
@@ -37,14 +43,26 @@ enum vga_color {
     VGA_COLOR_WHITE = 15,
 };
 
+/* Port I/O */
 void outb(uint16_t port, uint8_t val);
 uint8_t inb(uint16_t port);
+
+/* Cursor */
 void update_cursor(int x, int y);
 void enable_cursor(uint8_t cursor_start, uint8_t cursor_end);
+
+/* String & Memory */
 size_t strlen(const char* str);
+int strcmp(const char* s1, const char* s2);
+int strncmp(const char* s1, const char* s2, size_t n);
+void* memset(void* ptr, int value, size_t num);
+void* memcpy(void* destination, const void* source, size_t num);
+
+/* VGA helpers */
 uint16_t vga_entry(unsigned char uc, uint8_t color);
 uint8_t vga_entry_color(enum vga_color fg, enum vga_color bg);
 
+/* Terminal */
 void terminal_initialize(void);
 void terminal_setcolor(uint8_t color);
 void terminal_putentryat(char c, uint8_t color, size_t x, size_t y);
@@ -53,11 +71,25 @@ void terminal_write(const char* data, size_t size);
 void terminal_writestring(const char* data);
 void terminal_scroll(void);
 void terminal_switch_screen(int screen_index);
+void terminal_clear(void);
 
+/* Output */
 void itoa(int value, char* str, int base);
 void printk(const char* format, ...);
 
-void* memset(void* ptr, int value, size_t num);
-void* memcpy(void* destination, const void* source, size_t num);
+/* Command system */
+void process_command(const char* cmd);
+void print_prompt(void);
+
+/* Log & Test */
+void kernel_log(const char* msg);
+void run_tests(void);
+
+/* Keyboard interface */
+extern int current_screen;
+extern char cmd_buffer[];
+extern int cmd_len;
+extern size_t input_start_row;
+extern size_t input_start_col;
 
 #endif
