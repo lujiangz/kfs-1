@@ -92,7 +92,7 @@ graph TB
     end
     subgraph "Kernel Core"
         KMAIN["kernel_main()\nterminal_initialize()\n5 virtual screens"]
-        CMD["Command System\nprocess_command()\nhelp · clear · color · ...]
+        CMD["Command System\nprocess_command()\nhelp · clear · color · ..."]
         KUTIL["kernel_utils.c\nPort I/O · Cursor · printk\nstrcmp · strncmp"]
     end
     subgraph "Input Processing"
