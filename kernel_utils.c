@@ -37,6 +37,26 @@ size_t strlen(const char* str) {
     return len;
 }
 
+/* String Karsilastirma */
+int strcmp(const char* s1, const char* s2) {
+    while (*s1 && (*s1 == *s2)) {
+        s1++;
+        s2++;
+    }
+    return *(unsigned char*)s1 - *(unsigned char*)s2;
+}
+
+int strncmp(const char* s1, const char* s2, size_t n) {
+    while (n && *s1 && (*s1 == *s2)) {
+        s1++;
+        s2++;
+        n--;
+    }
+    if (n == 0) return 0;
+    return *(unsigned char*)s1 - *(unsigned char*)s2;
+}
+
+
 /* VGA Yardımcıları */
 uint8_t vga_entry_color(enum vga_color fg, enum vga_color bg) {
     return fg | bg << 4;
