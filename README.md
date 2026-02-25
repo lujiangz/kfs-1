@@ -377,57 +377,39 @@ flowchart TD
 
 ### Prerequisites
 
-Install the required toolchain on **Debian/Ubuntu**:
+The Makefile automatically detects the host architecture (`uname -m`) and selects the appropriate toolchain.
+
+**x86 / x86_64 host (native):**
 
 ```bash
 sudo apt install build-essential nasm qemu-system-x86 xorriso grub-pc-bin gcc-multilib
 ```
 
-This provides:
-- **NASM** — assembler for `boot.s`
-- **GCC** — C compiler with `-m32` cross-compilation support
-- **LD** — linker (binutils)
-- **GRUB** — `grub-mkrescue` for ISO creation
-- **QEMU** — `qemu-system-i386` for emulation
-- **xorriso** — required by `grub-mkrescue`
+**ARM / aarch64 host (cross-compilation — e.g. Kali ARM in UTM):**
+
+```bash
+sudo apt install gcc-i686-linux-gnu binutils-i686-linux-gnu qemu-system-x86
+```
+
+> **Note:** On ARM hosts, `grub-pc-bin` is not available in ARM repositories. The Makefile defaults to building only `kernel.bin` and uses `qemu-system-i386 -kernel` to boot directly without GRUB/ISO.
 
 ### Build & Run
 
 ```bash
-# Build everything and create ISO
+# Build (ARM: kernel.bin only | x86: kernel.bin + ISO)
 make
 
-# Run in QEMU
+# Run in QEMU (ARM: -kernel | x86: -cdrom)
 make run
+
+# Build kernel.bin only (both architectures)
+make kernel
+
+# Show detected toolchain
+make info
 
 # Clean build artifacts
 make clean
-```
-
-**Or manually:**
-
-```bash
-# 1. Assemble boot code
-as --32 boot.s -o boot.o
-
-# 2. Compile C sources
-gcc -m32 -ffreestanding -fno-builtin -fno-exceptions -c kernel.c -o kernel.o
-gcc -m32 -ffreestanding -fno-builtin -fno-exceptions -c kernel_utils.c -o kernel_utils.o
-gcc -m32 -ffreestanding -fno-builtin -fno-exceptions -c gdt.c -o gdt.o
-gcc -m32 -ffreestanding -fno-builtin -fno-exceptions -c idt.c -o idt.o
-gcc -m32 -ffreestanding -fno-builtin -fno-exceptions -c keyboard.c -o keyboard.o
-
-# 3. Link
-ld -m elf_i386 -T linker.ld -o kernel.bin boot.o kernel.o kernel_utils.o gdt.o idt.o keyboard.o
-
-# 4. Create bootable ISO
-mkdir -p isodir/boot/grub
-cp kernel.bin isodir/boot/kernel.bin
-echo "menuentry 'KFS-1' { multiboot /boot/kernel.bin }" > isodir/boot/grub/grub.cfg
-grub-mkrescue -o myos.iso isodir
-
-# 5. Run
-qemu-system-i386 -cdrom myos.iso
 ```
 
 ---
@@ -465,11 +447,14 @@ flowchart TD
 
 ### Makefile Targets
 
-| Target | Description |
-|--------|-------------|
-| `make` / `make all` | Build `kernel.bin` and create `myos.iso` |
-| `make run` | Build and launch in QEMU |
-| `make clean` | Remove all build artifacts |
+| Target | x86 Host | ARM Host (cross-compile) |
+|--------|----------|-------------------------|
+| `make` / `make all` | Build `kernel.bin` + `myos.iso` | Build `kernel.bin` only |
+| `make kernel` | Build `kernel.bin` only | Build `kernel.bin` only |
+| `make iso` | Create `myos.iso` via GRUB | Requires `grub-pc-bin` (not available on ARM) |
+| `make run` | Boot ISO via `qemu -cdrom` | Boot kernel via `qemu -kernel` |
+| `make info` | Show detected arch and toolchain | Show detected arch and toolchain |
+| `make clean` | Remove all build artifacts | Remove all build artifacts |
 
 ### Compiler & Linker Flags
 
@@ -541,8 +526,11 @@ Type commands at the `kfs>` prompt and press **Enter**:
 
 | Problem | Possible Cause | Solution |
 |---------|---------------|----------|
-| `as: command not found` | Missing assembler | Install `build-essential` and `nasm` |
-| `grub-mkrescue` errors | Missing GRUB tools | Install `grub-pc-bin` and `xorriso` |
+| `as: command not found` | Missing assembler | Install `build-essential` (x86) or `binutils-i686-linux-gnu` (ARM) |
+| `i686-linux-gnu-gcc: not found` | Missing cross-compiler (ARM) | `sudo apt install gcc-i686-linux-gnu binutils-i686-linux-gnu` |
+| `grub-mkrescue` errors | Missing GRUB tools | Install `grub-pc-bin` and `xorriso` (x86 only) |
+| `grub-pc-bin` not found (ARM) | Package unavailable on ARM repos | Use `make kernel` + `make run` instead of ISO |
+| `qemu-system-i386: not found` | QEMU not installed | `sudo apt install qemu-system-x86` |
 | Blank screen after boot | Multiboot header misaligned | Verify `boot.s` header and `linker.ld` section order |
 | No keyboard response | IDT/PIC not configured | Check `init_idt()` and PIC remapping in `idt.c` |
 | Characters not appearing | VGA buffer not synced | Ensure `terminal_putchar()` writes to both buffer and video memory |
