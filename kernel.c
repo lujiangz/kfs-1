@@ -70,6 +70,7 @@ void terminal_initialize(void) {
         current_screen = i;
         if (i == 0) {
             printk("=== KFS-1 Terminal 1 ===\n");
+            printk("========== 42 ==========\n");
             printk("Type 'help' for available commands.\n\n");
         }
         if (i == 1) {
