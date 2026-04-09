@@ -40,22 +40,8 @@ void pic_remap() {
 
     outb(PIC1_DATA, 0x01);
     outb(PIC2_DATA, 0x01);
-
-    // Unmask only Keyboard (IRQ 1). Bit 1 of IMR.
-    // Actually we should restore masks but ensure Keyboard is unmasked.
-    // For now, let's just unmask keyboard and cascade (IRQ 2).
-    // Master: 1111 1101 (0xFD) -> enable Keyboard (bit 1) and Cascade (bit 2)?
-    // IRQ 1 is bit 1 (2nd bit). IRQ 0 is bit 0.
-    // Mask: 0 = enabled, 1 = disabled.
-    // ~2 = 1111 1101 (FD).
-    // ~1 = 1111 1110 (FE).
     
-    // Let's restore masks for now, assuming they were 0xFF (all disabled) or we should explicitly enable keyboard.
-    // If I restore `a1`, I don't know what it was.
-    // Let's explicitly enable keyboard.
-    
-    outb(PIC1_DATA, 0xFD); // Enable Keyboard (IRQ1) and everything else disabled? No, IRQ2 is cascade.
-    // Actually, usually we enable IRQ0 (Timer) and IRQ1 (Keyboard).
+    outb(PIC1_DATA, 0xFD); 
     // 0xFC = 1111 1100.
     outb(PIC2_DATA, 0xFF);
 }
