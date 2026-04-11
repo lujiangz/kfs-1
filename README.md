@@ -539,3 +539,7 @@ Type commands at the `kfs>` prompt and press **Enter**:
 | Backspace won't delete | At prompt boundary | This is intended — cannot delete the `kfs>` prompt |
 | F4 tests fail | Kernel corruption | Run `make clean && make` and reboot |
 | QEMU won't boot ISO | Corrupted ISO | Run `make clean && make` and verify ISO contents |
+
+---
+
+Made by [msevuk](https://profile.intra.42.fr/users/msevuk) & [bbosnak](https://profile.intra.42.fr/users/bbosnak)
