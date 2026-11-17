@@ -29,6 +29,7 @@ stack_top:
 .type _start, @function
 _start:
     mov $stack_top, %esp
+	cld
     call kernel_main
     cli
 1:  hlt
@@ -61,9 +62,11 @@ idt_load:
 .global isr33
 .type isr33, @function
 isr33:
-    cli
     pusha
+	cld
+	mov %esp, %ebx
+	and $-16, %esp
     call keyboard_handler
+	mov %ebx, %esp
     popa
-    sti
     iret
