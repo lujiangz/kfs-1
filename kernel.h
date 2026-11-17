@@ -85,11 +85,19 @@ void print_prompt(void);
 void kernel_log(const char* msg);
 void run_tests(void);
 
-/* Keyboard interface */
+/* Keyboard & Screen interface */
+typedef struct {
+    uint16_t buffer[VGA_WIDTH * VGA_HEIGHT];
+    size_t row;
+    size_t column;
+    uint8_t color;
+    char cmd_buffer[CMD_BUFFER_SIZE];
+    int cmd_len;
+    size_t input_start_row;
+    size_t input_start_col;
+} Screen;
+
+extern Screen screens[NUM_SCREENS];
 extern int current_screen;
-extern char cmd_buffer[];
-extern int cmd_len;
-extern size_t input_start_row;
-extern size_t input_start_col;
 
 #endif

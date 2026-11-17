@@ -516,6 +516,7 @@ Type commands at the `kfs>` prompt and press **Enter**:
 | `whoami` | Display current screen info and cursor position |
 | `stack` | Show the current stack pointer (ESP) |
 | `reboot` | Reboot the system (triple fault) |
+| `halt` | Halt the CPU (`cli` + `hlt`) |
 | `whoistheking` | 🥚 |
 
 **Backspace** deletes characters but cannot go past the `kfs>` prompt. **Enter** submits the command.

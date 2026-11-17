@@ -20,6 +20,8 @@ Stack oluşturmamız lazım
 
 .section .bss
 .align 16   /* Kullanacağımız derleyiciler System V ABI standartlarına uyduğu için 16 ve katı olan bir değer ile başlatmamız gerekiyor. (SSE (Streaming SIMD Extensions))*/
+.global stack_bottom
+.global stack_top
 stack_bottom:
 .skip 16384  /* 16kib */
 stack_top:
@@ -29,6 +31,7 @@ stack_top:
 .type _start, @function
 _start:
     mov $stack_top, %esp
+    xor %ebp, %ebp
 	cld
     call kernel_main
     cli

@@ -52,7 +52,6 @@ void keyboard_handler() {
     /* F1–F5: Screen switching */
     if (scancode == 0x3B) { /* F1 */
         terminal_switch_screen(0);
-        /* Restore input boundary for this screen */
         goto eoi;
     }
     if (scancode == 0x3C) { /* F2 */
@@ -84,24 +83,26 @@ void keyboard_handler() {
         char c = kbdus[scancode];
         if (!c) goto eoi;
 
+        Screen* scr = &screens[current_screen];
+
         if (c == '\n') {
             /* Enter — process command */
             printk("\n");
-            cmd_buffer[cmd_len] = '\0';
-            process_command(cmd_buffer);
+            scr->cmd_buffer[scr->cmd_len] = '\0';
+            process_command(scr->cmd_buffer);
             print_prompt();
         } else if (c == '\b') {
             /* Backspace — remove from buffer and screen */
-            if (cmd_len > 0) {
-                cmd_len--;
-                cmd_buffer[cmd_len] = '\0';
+            if (scr->cmd_len > 0) {
+                scr->cmd_len--;
+                scr->cmd_buffer[scr->cmd_len] = '\0';
                 terminal_putchar('\b');
             }
         } else {
             /* Printable character */
-            if (cmd_len < CMD_BUFFER_SIZE - 1) {
-                cmd_buffer[cmd_len++] = c;
-                cmd_buffer[cmd_len] = '\0';
+            if (scr->cmd_len < CMD_BUFFER_SIZE - 1) {
+                scr->cmd_buffer[scr->cmd_len++] = c;
+                scr->cmd_buffer[scr->cmd_len] = '\0';
                 printk("%c", c);
             }
         }

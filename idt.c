@@ -24,11 +24,6 @@ void set_idt_gate(uint8_t num, uint32_t base, uint16_t sel, uint8_t flags) {
 #define PIC2_DATA	(PIC2+1)
 
 void pic_remap() {
-    uint8_t a1, a2;
-
-    a1 = inb(PIC1_DATA);                        // save masks
-    a2 = inb(PIC2_DATA);
-
     outb(PIC1_COMMAND, 0x11);  // starts the initialization sequence (in cascade mode)
     outb(PIC2_COMMAND, 0x11);
 

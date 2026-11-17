@@ -69,24 +69,11 @@ uint16_t vga_entry(unsigned char uc, uint8_t color) {
 /* Integer to ASCII */
 void itoa(int value, char* str, int base) {
     char *ptr = str, *ptr1 = str, tmp_char;
-    int tmp_value;
+    unsigned int num;
 
     if (base < 2 || base > 36) {
         *str = '\0';
         return;
-    }
-
-    if (value < 0 && base == 10) {
-        *ptr++ = '-';
-        str++; 
-        value = -value;
-    }
-
-    unsigned int num = (unsigned int)value;
-    if (base == 10 && value < 0) {
-        num = (unsigned int)(-value);
-    } else {
-        num = (unsigned int)value;
     }
 
     if (value == 0) {
@@ -95,13 +82,21 @@ void itoa(int value, char* str, int base) {
         return;
     }
 
+    if (base == 10 && value < 0) {
+        *ptr++ = '-';
+        ptr1 = ptr;
+        num = 0u - (unsigned int)value;
+    } else {
+        num = (unsigned int)value;
+    }
+
     while (num != 0) {
-        tmp_value = num % base;
-        num /= base;
+        unsigned int tmp_value = num % (unsigned int)base;
+        num /= (unsigned int)base;
         if (tmp_value > 9)
-            *ptr++ = (tmp_value - 10) + 'a';
+            *ptr++ = (char)((tmp_value - 10) + 'a');
         else
-            *ptr++ = tmp_value + '0';
+            *ptr++ = (char)(tmp_value + '0');
     }
 
     *ptr-- = '\0';
@@ -132,6 +127,11 @@ void printk(const char* format, ...) {
                 itoa(i, buffer, 10);
                 terminal_writestring(buffer);
             } else if (*format == 'x') {
+                int i = va_arg(args, int);
+                char buffer[32];
+                itoa(i, buffer, 16);
+                terminal_writestring(buffer);
+            } else if (*format == 'p') {
                 int i = va_arg(args, int);
                 char buffer[32];
                 itoa(i, buffer, 16);
