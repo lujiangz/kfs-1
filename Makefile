@@ -16,7 +16,7 @@ else
 endif
 
 
-CFLAGS = -m32 -ffreestanding -fno-builtin -fno-exceptions -fno-stack-protector -nostdlib -nodefaultlibs
+CFLAGS = -m32 -ffreestanding -fno-builtin -fno-exceptions -fno-stack-protector -fno-omit-frame-pointer -nostdlib -nodefaultlibs
 LDFLAGS = -m elf_i386 -T linker.ld
 
 KERNEL_BIN = kernel.bin
@@ -72,7 +72,12 @@ $(ISO_NAME): $(KERNEL_BIN)
 
 clean:
 	rm -rf isodir
-	rm -f *.o $(KERNEL_BIN) $(ISO_NAME)
+	rm -f *.o
+
+fclean: clean
+	rm -f $(KERNEL_BIN) $(ISO_NAME)
+
+re: fclean all
 
 # ARM: QEMU multiboot kerneli doğrudan boot edebilir (ISO gerekmez)
 # x86: ISO ile boot
@@ -91,4 +96,4 @@ info:
 	@echo "AS        : $(AS)"
 	@echo "LD        : $(LD)"
 
-.PHONY: all kernel iso clean run info
+.PHONY: all kernel iso clean fclean re run info

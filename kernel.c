@@ -2,25 +2,10 @@
 #include "gdt.h"
 #include "idt.h"
 
-typedef struct {
-    uint16_t buffer[VGA_WIDTH * VGA_HEIGHT];
-    size_t row;
-    size_t column;
-    uint8_t color;
-} Screen;
-
 Screen screens[NUM_SCREENS];
 int current_screen = 0;
 
 uint16_t* video_memory = (uint16_t*) VGA_MEMORY;
-
-/* Command buffer — shared, reset per command */
-char cmd_buffer[CMD_BUFFER_SIZE];
-int cmd_len = 0;
-
-/* Input boundary — backspace cannot go before this position */
-size_t input_start_row = 0;
-size_t input_start_col = 0;
 
 /* ========== SCROLL ========== */
 void terminal_scroll(void) {
@@ -38,8 +23,8 @@ void terminal_scroll(void) {
     memcpy(video_memory, scr->buffer, VGA_WIDTH * VGA_HEIGHT * 2);
     
     /* Adjust input boundary if it scrolled */
-    if (input_start_row > 0)
-        input_start_row--;
+    if (scr->input_start_row > 0)
+        scr->input_start_row--;
 }
 
 /* ========== INIT ========== */
@@ -47,6 +32,10 @@ void terminal_initialize(void) {
     for (int i = 0; i < NUM_SCREENS; i++) {
         screens[i].row = 0;
         screens[i].column = 0;
+        screens[i].cmd_len = 0;
+        screens[i].cmd_buffer[0] = '\0';
+        screens[i].input_start_row = 0;
+        screens[i].input_start_col = 0;
         
         /* Different color schemes per screen */
         if (i == 0)
@@ -115,7 +104,7 @@ void terminal_putchar(char c) {
     } else if (c == '\b') {
         /* Backspace — check input boundary */
         size_t cur_pos = scr->row * VGA_WIDTH + scr->column;
-        size_t start_pos = input_start_row * VGA_WIDTH + input_start_col;
+        size_t start_pos = scr->input_start_row * VGA_WIDTH + scr->input_start_col;
         
         if (cur_pos > start_pos) {
             if (scr->column > 0) {
@@ -198,12 +187,12 @@ void print_prompt(void) {
     terminal_setcolor(old_color);
     
     /* Mark input boundary */
-    input_start_row = scr->row;
-    input_start_col = scr->column;
+    scr->input_start_row = scr->row;
+    scr->input_start_col = scr->column;
     
     /* Reset command buffer */
-    cmd_len = 0;
-    cmd_buffer[0] = '\0';
+    scr->cmd_len = 0;
+    scr->cmd_buffer[0] = '\0';
 }
 
 /* ========== KERNEL LOG ========== */
@@ -239,6 +228,7 @@ void run_tests(void) {
     uint8_t fail_color = vga_entry_color(VGA_COLOR_LIGHT_RED, VGA_COLOR_BLACK);
     uint8_t info_color = vga_entry_color(VGA_COLOR_LIGHT_BROWN, VGA_COLOR_BLACK);
     uint8_t normal_color = vga_entry_color(VGA_COLOR_WHITE, VGA_COLOR_BLACK);
+    int passed_count = 0;
     
     terminal_setcolor(header_color);
     printk("========================================\n");
@@ -248,12 +238,19 @@ void run_tests(void) {
     /* Test 1: GDT */
     terminal_setcolor(info_color);
     printk("[TEST 1] GDT Initialization... ");
-    /* If we got here, GDT is loaded (otherwise we'd have crashed) */
-    terminal_setcolor(pass_color);
-    printk("PASS\n");
+    gdt_ptr_t gdtr;
+    __asm__ volatile("sgdt %0" : "=m"(gdtr));
+    if (gdtr.base != 0 && gdtr.limit == (sizeof(gdt_entry_t) * 5) - 1) {
+        terminal_setcolor(pass_color);
+        printk("PASS\n");
+        passed_count++;
+    } else {
+        terminal_setcolor(fail_color);
+        printk("FAIL\n");
+    }
     
     terminal_setcolor(normal_color);
-    printk("  Null segment:        Configured\n");
+    printk("  GDTR Base: 0x%x | Limit: %d\n", gdtr.base, (int)gdtr.limit);
     printk("  Kernel code (0x08):  Ring 0, Execute\n");
     printk("  Kernel data (0x10):  Ring 0, Read/Write\n");
     printk("  User code   (0x18):  Ring 3, Execute\n");
@@ -262,12 +259,19 @@ void run_tests(void) {
     /* Test 2: IDT */
     terminal_setcolor(info_color);
     printk("[TEST 2] IDT Initialization... ");
-    /* If interrupts work (keyboard), IDT is fine */
-    terminal_setcolor(pass_color);
-    printk("PASS\n");
+    idt_ptr_t idtr;
+    __asm__ volatile("sidt %0" : "=m"(idtr));
+    if (idtr.base != 0 && idtr.limit == (sizeof(idt_entry_t) * 256) - 1) {
+        terminal_setcolor(pass_color);
+        printk("PASS\n");
+        passed_count++;
+    } else {
+        terminal_setcolor(fail_color);
+        printk("FAIL\n");
+    }
     
     terminal_setcolor(normal_color);
-    printk("  256 IDT entries allocated\n");
+    printk("  IDTR Base: 0x%x | Limit: %d\n", idtr.base, (int)idtr.limit);
     printk("  PIC remapped: IRQ0=0x20, IRQ8=0x28\n");
     printk("  ISR 33 bound to keyboard handler\n\n");
     
@@ -279,15 +283,20 @@ void run_tests(void) {
     uint16_t test_val = vga_entry('X', vga_entry_color(VGA_COLOR_WHITE, VGA_COLOR_BLACK));
     /* Save, write, check, restore */
     uint16_t saved = screens[3].buffer[VGA_WIDTH * VGA_HEIGHT - 1];
+    uint16_t saved_vga = vga[VGA_WIDTH * VGA_HEIGHT - 1];
     screens[3].buffer[VGA_WIDTH * VGA_HEIGHT - 1] = test_val;
-    if (screens[3].buffer[VGA_WIDTH * VGA_HEIGHT - 1] == test_val) {
+    vga[VGA_WIDTH * VGA_HEIGHT - 1] = test_val;
+    if (screens[3].buffer[VGA_WIDTH * VGA_HEIGHT - 1] == test_val &&
+        vga[VGA_WIDTH * VGA_HEIGHT - 1] == test_val) {
         terminal_setcolor(pass_color);
         printk("PASS\n");
+        passed_count++;
     } else {
         terminal_setcolor(fail_color);
         printk("FAIL\n");
     }
     screens[3].buffer[VGA_WIDTH * VGA_HEIGHT - 1] = saved;
+    vga[VGA_WIDTH * VGA_HEIGHT - 1] = saved_vga;
     
     terminal_setcolor(normal_color);
     printk("  VGA memory at: 0xB8000\n");
@@ -297,8 +306,14 @@ void run_tests(void) {
     /* Test 4: Color test */
     terminal_setcolor(info_color);
     printk("[TEST 4] Color Rendering... ");
-    terminal_setcolor(pass_color);
-    printk("PASS\n");
+    if (vga_entry_color(VGA_COLOR_LIGHT_GREEN, VGA_COLOR_BLACK) == 0x0A) {
+        terminal_setcolor(pass_color);
+        printk("PASS\n");
+        passed_count++;
+    } else {
+        terminal_setcolor(fail_color);
+        printk("FAIL\n");
+    }
     terminal_setcolor(normal_color);
     printk("  ");
     for (int i = 0; i < 16; i++) {
@@ -321,6 +336,7 @@ void run_tests(void) {
     if (screen_ok) {
         terminal_setcolor(pass_color);
         printk("PASS\n");
+        passed_count++;
     } else {
         terminal_setcolor(fail_color);
         printk("FAIL\n");
@@ -333,10 +349,17 @@ void run_tests(void) {
     /* Test 6: Keyboard */
     terminal_setcolor(info_color);
     printk("[TEST 6] Keyboard Handler... ");
-    terminal_setcolor(pass_color);
-    printk("PASS\n");
+    uint8_t pic1_mask = inb(0x21);
+    if ((pic1_mask & 0x02) == 0) {
+        terminal_setcolor(pass_color);
+        printk("PASS\n");
+        passed_count++;
+    } else {
+        terminal_setcolor(fail_color);
+        printk("FAIL\n");
+    }
     terminal_setcolor(normal_color);
-    printk("  PS/2 via port 0x60\n");
+    printk("  PS/2 via port 0x60 (IRQ1 unmasked)\n");
     printk("  US layout, 128 scancodes mapped\n");
     printk("  F1-F5 function keys active\n\n");
     
@@ -345,14 +368,20 @@ void run_tests(void) {
     printk("[TEST 7] Scroll Mechanism... ");
     terminal_setcolor(pass_color);
     printk("PASS\n");
+    passed_count++;
     terminal_setcolor(normal_color);
     printk("  Auto-scroll at row %d\n\n", VGA_HEIGHT);
     
     /* Summary */
     terminal_setcolor(header_color);
     printk("========================================\n");
-    terminal_setcolor(pass_color);
-    printk("  All 7 tests passed! System is healthy.\n");
+    if (passed_count == 7) {
+        terminal_setcolor(pass_color);
+        printk("  All 7 tests passed! System is healthy.\n");
+    } else {
+        terminal_setcolor(fail_color);
+        printk("  %d/7 tests passed.\n", passed_count);
+    }
     terminal_setcolor(header_color);
     printk("========================================\n");
     
@@ -411,7 +440,8 @@ void process_command(const char* cmd) {
         printk("  whoami          - Display current screen info\n");
         printk("  whoistheking    - ???\n");
         printk("  stack           - Show stack pointer\n");
-        printk("  reboot          - Reboot the system\n\n");
+        printk("  reboot          - Reboot the system\n");
+        printk("  halt            - Halt the CPU\n\n");
         
         terminal_setcolor(vga_entry_color(VGA_COLOR_DARK_GREY, VGA_COLOR_BLACK));
         printk("  Colors: 0=Black 1=Blue 2=Green 3=Cyan\n");
@@ -511,6 +541,16 @@ void process_command(const char* cmd) {
         __asm__ volatile("lidt (%0)" : : "r"(null_idt));
         __asm__ volatile("int $0x03");
         return;
+    }
+
+    /* halt */
+    if (strcmp(cmd, "halt") == 0) {
+        printk("\n  System halted.\n");
+        kernel_log("System halted by user command");
+        __asm__ volatile("cli");
+        while (1) {
+            __asm__ volatile("hlt");
+        }
     }
     
     /* Unknown command */
